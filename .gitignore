@@ -1,0 +1,9 @@
+.idea
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.env
+.pytest_cache/
+mlruns/
+mlartifacts/
+*.db
