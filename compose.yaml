@@ -1,0 +1,146 @@
+name: diapredict
+
+services:
+  airflow-db:
+    image: postgres:16.11-bookworm
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:?Run python scripts/init_env.py first}
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U airflow -d airflow']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    ports:
+      - '127.0.0.1:5000:5000'
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/jupyter.Dockerfile
+    working_dir: /workspace
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      PYTHONPATH: /workspace
+    init: true
+    ports:
+      - '127.0.0.1:8888:8888'
+    volumes:
+      - .:/workspace
+    command:
+      - python
+      - -m
+      - jupyter
+      - lab
+      - --ip=0.0.0.0
+      - --port=8888
+      - --no-browser
+      - --allow-root
+      - --IdentityProvider.token=diapredict-local
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/fastapi.Dockerfile
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    environment:
+      HOME: /tmp
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_MODEL_URI: ${MLFLOW_MODEL_URI:-models:/DiaPredictClassifier@champion}
+    ports:
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - ./app:/workspace/app:ro
+      - ./src:/workspace/src:ro
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+    restart: unless-stopped
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: docker/streamlit.Dockerfile
+    user: '${LOCAL_UID:-1000}:${LOCAL_GID:-1000}'
+    environment:
+      HOME: /tmp
+      API_URL: http://fastapi:8000
+    ports:
+      - '127.0.0.1:8501:8501'
+    volumes:
+      - ./app:/workspace/app:ro
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+    restart: unless-stopped
+
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+    user: '${AIRFLOW_UID:-1000}:0'
+    command: standalone
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@airflow-db:5432/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_FOLDER: /workspace/dags
+      AIRFLOW__CORE__PARALLELISM: '2'
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/state/passwords.json
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_DB_PASSWORD}
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://localhost:8080/execution/
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/state/logs
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      PYTHONPATH: /workspace
+      TRAINING_PYTHON: /opt/airflow/training/bin/python
+    ports:
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - .:/workspace
+      - airflow_state:/opt/airflow/state
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import json, urllib.request; d=json.load(urllib.request.urlopen('http://localhost:8080/api/v2/monitor/health', timeout=5)); assert all(d[k]['status']=='healthy' for k in ('metadatabase','scheduler','dag_processor'))"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    restart: unless-stopped
+
+volumes:
+  airflow_db:
+  airflow_state:
+  mlflow_data:
