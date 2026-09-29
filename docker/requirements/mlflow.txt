@@ -1,0 +1,3 @@
+mlflow==3.6.0
+# MLflow 3.6 imports a connection-pool helper removed in SQLAlchemy 2.1.
+SQLAlchemy==2.0.44
