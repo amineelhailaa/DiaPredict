@@ -1,11 +1,11 @@
-from sklearn.dummy import DummyRegressor, DummyClassifier
-from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor, RandomForestClassifier
-from sklearn.linear_model import LinearRegression, Ridge, LogisticRegression
-from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+import numpy as np
+from sklearn.ensemble import  RandomForestClassifier
+from sklearn.linear_model import  LogisticRegression
+from sklearn.tree import  DecisionTreeClassifier
 from src.config import RANDOM_STATE
 
 LOGISTIC_REGRESSION_SEARCH_SPACE = {
-    "model__C": [0.1, 1.0, 10.0],
+    "model__C": np.arange(0.1, 10, 0.5),
 }
 
 DECISION_TREE_SEARCH_SPACE = {
@@ -21,12 +21,7 @@ RANDOM_FOREST_SEARCH_SPACE = {
 
 
 MODEL_CONFIGS = {
-    "dummy_baseline": {
-        "estimator": DummyClassifier(
-            strategy="most_frequent",
-        ),
-        "search_space": None,
-    },
+
     "logistic_regression": {
         "estimator": LogisticRegression(
             max_iter = 2000,

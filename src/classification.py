@@ -1,13 +1,13 @@
 from sklearn import clone
 from sklearn.model_selection import KFold, cross_validate, StratifiedKFold
-from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 from src.config import RANDOM_STATE
 from src.model_config import MODEL_CONFIGS
 
 
 def create_model_pipeline(model):
     return Pipeline(
-        [
+        [   ("sampler", "passthrough"),
             ("model", clone(model)),
         ]
     )
