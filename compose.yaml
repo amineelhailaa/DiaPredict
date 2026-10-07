@@ -55,6 +55,7 @@ services:
       - --no-browser
       - --allow-root
       - --IdentityProvider.token=diapredict-local
+    restart: unless-stopped
 
   fastapi:
     build:
