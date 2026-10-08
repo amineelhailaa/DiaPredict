@@ -34,7 +34,6 @@ def load_data(path: str | Path) -> pd.DataFrame:
 
 
 def invalid_values_to_na(data: pd.DataFrame) -> pd.DataFrame:
-    """Return a copy with values rejected by their validators replaced by NA."""
     cleaned = data.copy()
     for column, validator in VALIDATORS.items():
         if column not in cleaned:
@@ -45,7 +44,6 @@ def invalid_values_to_na(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def outliering(series: pd.Series) -> pd.Series:
-    """Return a boolean mask identifying outliers with the 1.5 IQR rule."""
     q1 = series.quantile(0.25)
     q3 = series.quantile(0.75)
     iqr = q3 - q1
@@ -55,19 +53,16 @@ def outliering(series: pd.Series) -> pd.Series:
 
 
 def outliers_for_all_columns(data: pd.DataFrame) -> pd.DataFrame:
-    """Return an outlier mask for every numeric column."""
     numeric_data = data.select_dtypes(include="number")
     return numeric_data.apply(outliering)
 
 
 def stringify_column(series: pd.Series) -> pd.Series:
-    """Convert a column to clean strings while preserving missing values."""
     missing_values = ["NaN", "nan", "None", "null", ""]
     return series.astype("string").str.strip().replace(missing_values, pd.NA)
 
 
 def numeric_column(series: pd.Series) -> pd.Series:
-    """Convert a column to numbers, replacing conversion errors with NA."""
     return pd.to_numeric(series, errors="coerce")
 
 
