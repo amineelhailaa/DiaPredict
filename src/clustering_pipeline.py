@@ -12,6 +12,7 @@ def Kmean_build_clustering_pipeline(
 ):
     return Pipeline(
         steps = [
+            ("preprocessor", build_preprocessor(imputer)),
             ("kmeans", KMeans(
                 n_clusters=n_clusters,
                 n_init=20,
