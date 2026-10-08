@@ -6,7 +6,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from app.command.PredictionCommand import PredictionCMD
 app = FastAPI(title="DiaPredict API", version="0.1.0")
-MODEL_URI = "models:/diabetes-prediction-model@winner"
+MODEL_URI = os.getenv("MLFLOW_MODEL_URI")
 model = mlflow.pyfunc.load_model(MODEL_URI)
 ##model path
 

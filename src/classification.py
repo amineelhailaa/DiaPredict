@@ -3,11 +3,15 @@ from sklearn.model_selection import KFold, cross_validate, StratifiedKFold
 from imblearn.pipeline import Pipeline
 from src.config import RANDOM_STATE
 from src.model_config import MODEL_CONFIGS
+from src.preprocessing import build_preprocessor
 
 
 def create_model_pipeline(model):
+    preprocessor = build_preprocessor("knn")
     return Pipeline(
-        [   ("sampler", "passthrough"),
+        [
+            *preprocessor.steps,
+            ("sampler", "passthrough"),
             ("model", clone(model)),
         ]
     )
