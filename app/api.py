@@ -8,6 +8,7 @@ from app.command.PredictionCommand import PredictionCMD
 app = FastAPI(title="DiaPredict API", version="0.1.0")
 MODEL_URI = os.getenv("MLFLOW_MODEL_URI")
 model = mlflow.pyfunc.load_model(MODEL_URI)
+metadata = model.metadata.metadata
 ##model path
 
 @app.get("/")
@@ -28,8 +29,13 @@ def ready():
 
 @app.post("/predict")
 def predict(data: PredictionCMD):
-    prediction  =  model.predict(pd.DataFrame([data.model_dump()]))
-    return prediction
+    prediction  =  model.predict(pd.DataFrame([data.model_dump()], columns=metadata["features"] ))
+    cluster_id = str(prediction[0])
+    risk_category = metadata["cluster_mapping"][cluster_id]["risk_category"]
+    return {
+        "cluster"   : cluster_id,
+        "risk_category": risk_category
+    }
 
 
 

@@ -6,8 +6,8 @@ import streamlit as st
 
 st.set_page_config(page_title="DiaPredict", page_icon="🧪")
 st.title("DiaPredict")
-st.info("Docker environment is ready. Train your model before implementing the prediction form.")
-api_url = os.environ.get("API_URL", "http://fastapi:8000")
+st.info("project to predict the risk based on analysis.")
+api_url = os.environ.get("API_URL",)
 try:
     response = requests.get(f"{api_url}/health", timeout=5)
     response.raise_for_status()
